@@ -1,0 +1,69 @@
+# TLS reverse proxy in front of the stack. One origin for the browser:
+#   /            -> web  (static UI)
+#   /api/, /gateway/, /healthz -> api (REST gateway, chat SSE, conversations)
+#   /mcp         -> mcp  (MCP streamable HTTP)
+# The certificate is self-signed for localhost (scripts/gen-certs.sh).
+#
+# This file is an nginx image template: at start-up envsubst replaces only the
+# environment variables that are defined (AA_HTTPS_PORT); nginx variables such
+# as $host are left alone.
+
+# Never write the Authorization header (or any request header) to the access log.
+log_format noauth '$remote_addr [$time_iso8601] "$request_method $uri" $status '
+                  '$body_bytes_sent $request_time rid=$upstream_http_x_request_id';
+
+server {
+    listen 80;
+    server_name _;
+    server_tokens off;
+    location = /nginx-health { access_log off; return 200 "ok\n"; }
+    location / { return 308 https://$host:${AA_HTTPS_PORT}$request_uri; }
+}
+
+server {
+    listen 443 ssl;
+    http2 on;
+    server_name _;
+    server_tokens off;
+
+    ssl_certificate     /etc/nginx/certs/localhost.crt;
+    ssl_certificate_key /etc/nginx/certs/localhost.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_session_cache shared:SSL:10m;
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    client_max_body_size 1m;
+
+    access_log /var/log/nginx/access.log noauth;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto https;
+    proxy_set_header X-Request-ID $request_id;
+
+    location = /nginx-health { access_log off; return 200 "ok\n"; }
+
+    location /api/chat {
+        proxy_pass http://api:8000;
+        # Server-Sent Events: no buffering, long reads.
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 300s;
+        proxy_set_header Connection "";
+    }
+
+    location /api/ { proxy_pass http://api:8000; }
+    location /gateway/ { proxy_pass http://api:8000; }
+    location = /healthz { proxy_pass http://api:8000; }
+    location = /readyz { proxy_pass http://api:8000; }
+
+    location /mcp {
+        proxy_pass http://mcp:8001;
+        proxy_buffering off;
+        proxy_read_timeout 300s;
+        proxy_set_header Connection "";
+    }
+
+    location / { proxy_pass http://web:8080; }
+}

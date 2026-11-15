@@ -1,0 +1,48 @@
+[project]
+name = "analytics-assistant"
+version = "0.3.0"
+description = "LLM analytics assistant: point-in-time data store, model tools over MCP and REST, and a tool-calling chat agent."
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "starlette>=0.40",
+    "uvicorn>=0.30",
+    "httpx>=0.27",
+    # Tracing API only (no-op without the SDK); the SDK is the "otel" extra.
+    "opentelemetry-api>=1.25",
+]
+
+[project.optional-dependencies]
+# The MCP transport is optional so the REST gateway, the agent and the tests
+# run without it.
+mcp = ["mcp>=2.0"]
+# Optional real SFTP fetcher for the vendor drop feed; tests use a local folder.
+sftp = ["paramiko>=3.4"]
+# LangGraph agent option (AA_AGENT=graph) with SQLite checkpoints.
+graph = ["langgraph>=0.2", "langgraph-checkpoint-sqlite>=2.0"]
+# PostgreSQL: pgvector store and LangGraph Postgres checkpoints (AA_DATABASE_URL).
+postgres = ["psycopg[binary]>=3.1", "langgraph-checkpoint-postgres>=2.0"]
+# OpenTelemetry SDK (console exporter) and the OTLP exporter.
+otel = ["opentelemetry-sdk>=1.25", "opentelemetry-exporter-otlp-proto-http>=1.25"]
+# PDF text ingestion for the RAG service.
+pdf = ["pypdf>=4.0"]
+# Local sentence-transformers embeddings (downloads model weights on first use).
+embeddings = ["sentence-transformers>=2.7"]
+dev = ["pytest>=8.0", "ruff>=0.6", "pyyaml>=6.0"]
+
+[project.scripts]
+analytics-assistant = "analytics_assistant.__main__:main"
+
+# No models ship with the server. Each model is its own package under
+# ../packages/ registered in the "analytics_assistant.models" entry-point group.
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/analytics_assistant"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

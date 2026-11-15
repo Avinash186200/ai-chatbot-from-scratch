@@ -1,0 +1,15 @@
+.git
+.venv
+**/node_modules
+**/__pycache__
+**/*.egg-info
+*.db
+.env
+excel-client
+evals
+drop
+quarantine
+web
+deploy
+**/.pytest_cache
+**/.ruff_cache

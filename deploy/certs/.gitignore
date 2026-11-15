@@ -1,0 +1,3 @@
+# Self-signed certificates are generated here by scripts/gen-certs.sh and never committed.
+*
+!.gitignore

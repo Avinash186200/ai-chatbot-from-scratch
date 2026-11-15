@@ -1,0 +1,123 @@
+# Full stack: postgres (pgvector) + api + mcp + web + nginx (TLS).
+#
+#   cp .env.example .env            # then set AA_GATEWAY_TOKEN and POSTGRES_PASSWORD
+#   scripts/gen-certs.sh            # self-signed cert for https://localhost
+#   docker compose up -d --build    # or: make up
+#   open https://localhost:8443
+#
+# Only nginx publishes ports, and only on 127.0.0.1. Everything else talks on
+# the internal network. See docs/operations.md.
+
+x-assistant-env: &assistant-env
+  AA_GATEWAY_TOKEN: ${AA_GATEWAY_TOKEN:?set AA_GATEWAY_TOKEN in .env}
+  AA_DATABASE_URL: postgresql://${POSTGRES_USER:-assistant}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/${POSTGRES_DB:-assistant}
+  AA_DB_PATH: /data/analytics_assistant.db
+  AA_STATE_DB: /data/assistant_state.db
+  AA_AGENT: ${AA_AGENT:-graph}
+  AA_LLM_PROVIDER: ${AA_LLM_PROVIDER:-scripted}
+  AA_LLM_BASE_URL: ${AA_LLM_BASE_URL:-}
+  AA_LLM_MODEL: ${AA_LLM_MODEL:-}
+  AA_LLM_API_KEY: ${AA_LLM_API_KEY:-}
+  AA_LLM_FALLBACK_PROVIDER: ${AA_LLM_FALLBACK_PROVIDER:-}
+  AA_LLM_FALLBACK_BASE_URL: ${AA_LLM_FALLBACK_BASE_URL:-}
+  AA_LLM_FALLBACK_MODEL: ${AA_LLM_FALLBACK_MODEL:-}
+  AA_LLM_FALLBACK_API_KEY: ${AA_LLM_FALLBACK_API_KEY:-}
+  AA_OTEL_EXPORTER: ${AA_OTEL_EXPORTER:-console}
+  AA_OTEL_ENDPOINT: ${AA_OTEL_ENDPOINT:-}
+  AA_LOG_FORMAT: json
+  # The Excel add-in dev server calls the gateway cross-origin; the web UI is same-origin.
+  AA_CORS_ORIGINS: ${AA_CORS_ORIGINS:-https://localhost:3000}
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-assistant}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-assistant}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build: .
+    environment:
+      <<: *assistant-env
+      AA_HOST: 0.0.0.0
+      AA_PORT: "8000"
+    volumes:
+      - assistant-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz')"]
+      interval: 10s
+      timeout: 3s
+      start_period: 30s
+      retries: 10
+    restart: unless-stopped
+
+  mcp:
+    build: .
+    command: ["python", "-m", "analytics_assistant", "mcp-http"]
+    environment:
+      <<: *assistant-env
+      AA_HOST: 0.0.0.0
+      AA_MCP_PORT: "8001"
+      # Host headers the MCP transport accepts (DNS-rebinding protection).
+      AA_MCP_ALLOWED_HOSTS: localhost,localhost:*,127.0.0.1,127.0.0.1:*,mcp:8001
+    volumes:
+      - assistant-data:/data
+    depends_on:
+      api:
+        condition: service_healthy   # api seeds the shared store first
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/healthz')"]
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+      retries: 10
+    restart: unless-stopped
+
+  web:
+    build: ./web
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.27-alpine
+    environment:
+      AA_HTTPS_PORT: ${AA_HTTPS_PORT:-8443}
+    volumes:
+      - ./deploy/nginx/proxy.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./deploy/certs:/etc/nginx/certs:ro
+    ports:
+      - "127.0.0.1:${AA_HTTPS_PORT:-8443}:443"
+      - "127.0.0.1:${AA_HTTP_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+      mcp:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/nginx-health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  pg-data:
+  assistant-data:

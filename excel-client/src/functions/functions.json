@@ -1,0 +1,74 @@
+{
+  "functions": [
+    {
+      "id": "FORECAST",
+      "name": "FORECAST",
+      "description": "Forecast a series a few business days ahead, using only data published by the as-of date. Spills the forecast path and its provenance.",
+      "parameters": [
+        {
+          "name": "series",
+          "description": "Series name, e.g. RATE_LONG.",
+          "type": "string",
+          "dimensionality": "scalar"
+        },
+        {
+          "name": "horizon",
+          "description": "Business days ahead (the model accepts 1 to 20).",
+          "type": "number",
+          "dimensionality": "scalar"
+        },
+        {
+          "name": "asOf",
+          "description": "Optional as-of date: a date cell or a YYYY-MM-DD string. Leave out for the latest data.",
+          "type": "any",
+          "dimensionality": "scalar",
+          "optional": true
+        }
+      ],
+      "result": {
+        "dimensionality": "matrix"
+      },
+      "options": {
+        "cancelable": true
+      }
+    },
+    {
+      "id": "REGIME",
+      "name": "REGIME",
+      "description": "Classify the regime of a rate series on the as-of date. Spills the result and its provenance.",
+      "parameters": [
+        {
+          "name": "series",
+          "description": "Rate series name, e.g. POLICY_RATE.",
+          "type": "string",
+          "dimensionality": "scalar"
+        },
+        {
+          "name": "asOf",
+          "description": "Optional as-of date: a date cell or a YYYY-MM-DD string. Leave out for the latest data.",
+          "type": "any",
+          "dimensionality": "scalar",
+          "optional": true
+        }
+      ],
+      "result": {
+        "dimensionality": "matrix"
+      },
+      "options": {
+        "cancelable": true
+      }
+    },
+    {
+      "id": "TOOLS",
+      "name": "TOOLS",
+      "description": "List the tools the gateway serves, with their descriptions.",
+      "parameters": [],
+      "result": {
+        "dimensionality": "matrix"
+      },
+      "options": {
+        "cancelable": true
+      }
+    }
+  ]
+}

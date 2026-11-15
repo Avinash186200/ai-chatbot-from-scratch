@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+build/
+dist/
+
+# Local data (including demo drop folders for the ingest command)
+*.db
+*.sqlite
+/drop/
+/quarantine/
+
+# Node
+node_modules/
+excel-client/dist/
+coverage/
+
+# Secrets: never commit real values
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+*.log

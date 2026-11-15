@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analytics Assistant</title>
+<script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+<script src="shared.js"></script>
+<style>
+  body { font: 14px/1.45 "Segoe UI", system-ui, sans-serif; margin: 12px; color: #1d2433; }
+  h1 { font-size: 16px; margin: 0 0 8px; }
+  label { display: block; margin-top: 10px; font-weight: 600; }
+  input { width: 100%; box-sizing: border-box; padding: 6px; margin-top: 4px; }
+  .row { display: flex; gap: 8px; margin-top: 12px; }
+  button { padding: 6px 12px; }
+  #status { margin-top: 12px; white-space: pre-wrap; }
+  #status.error { color: #a32020; }
+  #status.ok { color: #1d6b2f; }
+  #tools { padding-left: 18px; font-size: 12.5px; }
+  .hint { color: #5b6475; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Analytics Assistant</h1>
+<p class="hint">Functions: <code>=AA.FORECAST(series, horizon, [asOf])</code>,
+  <code>=AA.REGIME(series, [asOf])</code>, <code>=AA.TOOLS()</code>.</p>
+<label for="base-url">Gateway base URL</label>
+<input id="base-url" type="url" autocomplete="off" spellcheck="false" placeholder="https://your-gateway.example">
+<label for="token">Gateway token</label>
+<input id="token" type="password" autocomplete="off" spellcheck="false">
+<p class="hint">The token is only sent to https:// addresses or to localhost.</p>
+<div class="row">
+  <button id="save" type="button">Save</button>
+  <button id="test" type="button">Test connection</button>
+</div>
+<div id="status" role="status"></div>
+<ul id="tools"></ul>
+</body>
+</html>

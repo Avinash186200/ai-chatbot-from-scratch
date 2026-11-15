@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'">
+<title>Analytics Assistant</title>
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; max-width: 860px; margin: 2rem auto; padding: 0 1rem; color: #1d2433; }
+  h1 { font-size: 1.3rem; }
+  #log { border: 1px solid #d6dae3; border-radius: 8px; padding: 1rem; min-height: 260px; background: #fafbfd; }
+  .msg { margin: .5rem 0; white-space: pre-wrap; }
+  .user { font-weight: 600; }
+  .tool { font-family: ui-monospace, monospace; font-size: 12.5px; color: #4b5568; }
+  .err { color: #a32020; }
+  form { display: flex; gap: .5rem; margin-top: 1rem; }
+  input[type=text], input[type=password] { flex: 1; padding: .5rem; border: 1px solid #c3c8d4; border-radius: 6px; }
+  button { padding: .5rem 1rem; border-radius: 6px; border: 0; background: #2a5bd7; color: #fff; }
+</style>
+</head>
+<body>
+<h1>Analytics Assistant</h1>
+<p>Ask about the synthetic series (RATE_LONG, POLICY_RATE, VOL_INDEX). Every number comes from a tool call with an as-of date.</p>
+<form id="tok"><input id="token" type="password" placeholder="Gateway token (AA_GATEWAY_TOKEN)" autocomplete="off"><button>Save</button></form>
+<div id="log"></div>
+<form id="ask"><input id="q" type="text" placeholder="e.g. Forecast RATE_LONG 5 days ahead as of 2023-06-30"><button>Send</button></form>
+<script>
+const log = document.getElementById("log");
+let threadId = null;
+function line(text, cls) {
+  const div = document.createElement("div");
+  div.className = "msg " + (cls || "");
+  div.textContent = text;            // textContent only: never render model output as HTML
+  log.appendChild(div);
+}
+document.getElementById("tok").addEventListener("submit", (e) => {
+  e.preventDefault();
+  sessionStorage.setItem("aaToken", document.getElementById("token").value);
+  document.getElementById("token").value = "";
+  line("Token saved for this tab.", "tool");
+});
+document.getElementById("ask").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const q = document.getElementById("q");
+  const message = q.value.trim();
+  if (!message) return;
+  q.value = "";
+  line("You: " + message, "user");
+  const resp = await fetch("/api/chat", {
+    method: "POST",
+    headers: {"Content-Type": "application/json",
+              "Authorization": "Bearer " + (sessionStorage.getItem("aaToken") || "")},
+    body: JSON.stringify({message, thread_id: threadId}),
+  });
+  if (!resp.ok) { line("Error: HTTP " + resp.status, "err"); return; }
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  for (;;) {
+    const {value, done} = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, {stream: true});
+    let idx;
+    while ((idx = buf.indexOf("\n\n")) >= 0) {
+      const frame = buf.slice(0, idx); buf = buf.slice(idx + 2);
+      const data = frame.split("\n").find((l) => l.startsWith("data: "));
+      if (!data) continue;
+      const ev = JSON.parse(data.slice(6));
+      threadId = ev.thread_id;
+      if (ev.type === "tool.called") line("-> " + ev.data.name + " " + JSON.stringify(ev.data.arguments), "tool");
+      if (ev.type === "tool.result") line("<- " + ev.data.name + (ev.data.ok ? " ok" : " refused"), "tool");
+      if (ev.type === "message.completed") line(ev.data.content);
+      if (ev.type === "run.failed") line("Run failed: " + ev.data.error, "err");
+    }
+  }
+});
+</script>
+</body>
+</html>

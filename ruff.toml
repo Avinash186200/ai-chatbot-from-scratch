@@ -1,0 +1,9 @@
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", "excel-client"]
+
+[lint]
+select = ["E4", "E7", "E9", "F", "I"]
+
+[lint.isort]
+known-first-party = ["analytics_assistant", "aa_model_ar1", "aa_model_regime"]

@@ -1,0 +1,30 @@
+{
+  "name": "analytics-assistant-excel-client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Excel custom functions (AA.*) and a settings task pane for the Analytics Assistant tool gateway.",
+  "license": "MIT",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "serve": "node scripts/serve.mjs",
+    "test": "jest",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/custom-functions-runtime": "^1.6.13",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.19.2",
+    "@types/office-js": "^1.0.617",
+    "@types/office-runtime": "^1.0.40",
+    "esbuild": "^0.28.2",
+    "jest": "^30.5.2",
+    "ts-jest": "^29.4.15",
+    "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "glob": "^14.0.6",
+    "test-exclude": {
+      "minimatch": "^11.0.8"
+    }
+  }
+}

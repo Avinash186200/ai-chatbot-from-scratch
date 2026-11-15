@@ -1,0 +1,39 @@
+# Labelled retrieval queries for the RAG service (server/src/analytics_assistant/rag/).
+#
+# relevant:  the "<doc_id>#<section>" sources that answer the query. A query
+#            counts as recalled at k when any relevant source is in the top k hits.
+# relevant: [] means nothing in the corpus answers it: the service must
+#            return no hit above the similarity floor (it should say "I don't know").
+#
+# run_evals.py --suite retrieval prints recall@1, recall@3, MRR and the
+# abstention rate on the empty-relevant queries, and fails under the thresholds.
+# The corpus is server/src/analytics_assistant/corpus/*.md.
+
+k: [1, 3]
+thresholds:
+  recall_at_3: 0.85
+  abstain: 0.8
+
+queries:
+  - {q: "What is a snapshot id?", relevant: ["methodology.md#snapshot-id"]}
+  - {q: "Explain point-in-time data and lookahead.", relevant: ["methodology.md#point-in-time"]}
+  - {q: "How is the placeholder forecast computed?", relevant: ["methodology.md#forecast"]}
+  - {q: "How does the regime rule work?", relevant: ["methodology.md#regime"]}
+  - {q: "What happens when a vendor file arrives late?", relevant: ["methodology.md#vendor-feed"]}
+  - {q: "Where does the model version come from?", relevant: ["methodology.md#model-versions"]}
+  - {q: "Are restated values overwritten?", relevant: ["methodology.md#vendor-feed"]}
+  - {q: "Can an answer be reproduced and cached?", relevant: ["methodology.md#snapshot-id"]}
+  - {q: "What does SNAPSHOT_UNAVAILABLE mean?", relevant: ["tool-guide.md#error-codes"]}
+  - {q: "What is the response envelope?", relevant: ["tool-guide.md#envelope"]}
+  - {q: "Which fields are in the provenance?", relevant: ["tool-guide.md#provenance"]}
+  - {q: "What is the maximum forecast horizon?", relevant: ["tool-guide.md#horizon"]}
+  - {q: "Which series are available?", relevant: ["tool-guide.md#series"]}
+  - {q: "Why was my horizon refused?", relevant: ["tool-guide.md#horizon", "tool-guide.md#error-codes"]}
+  - {q: "What does MODEL_FAILURE mean?", relevant: ["tool-guide.md#error-codes"]}
+  - {q: "What happens to a malformed file?", relevant: ["methodology.md#vendor-feed"]}
+  # ---- nothing in the corpus answers these
+  - {q: "Explain quantum chromodynamics", relevant: []}
+  - {q: "What is the recipe for banana bread?", relevant: []}
+  - {q: "How do I reset my wifi router?", relevant: []}
+  - {q: "Who painted the ceiling of the chapel?", relevant: []}
+  - {q: "Explain blockchain consensus", relevant: []}
