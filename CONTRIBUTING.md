@@ -18,7 +18,7 @@ what it does.
    database URL. Span attributes are an allowlist.
 5. **Model output is text.** The web UI never renders model output as HTML.
 6. **Generic names only.** Synthetic series names (`RATE_LONG`,
-   `POLICY_RATE`, ...); no real company, client, product or person names in
+   `POLICY_RATE`, ...); no real company, product or person names in
    code, data, docs or commit messages.
 
 ## Set up
